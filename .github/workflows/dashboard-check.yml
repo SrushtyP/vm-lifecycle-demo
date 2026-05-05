@@ -1,0 +1,32 @@
+name: Dashboard Check
+
+on:
+  push:
+    paths:
+      - 'dashboard/**'
+  pull_request:
+    paths:
+      - 'dashboard/**'
+
+jobs:
+  check:
+    name: Check Flask App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install flask flask-cors
+
+      - name: Check app syntax
+        run: python -m py_compile dashboard/app.py
+
+      - name: Verify inventory JSON is valid
+        run: python -c "import json; json.load(open('inventory/vm_inventory.json'))"
