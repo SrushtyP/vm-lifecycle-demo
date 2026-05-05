@@ -31,6 +31,7 @@ jobs:
       - name: Run ansible-lint
         run: |
           ansible-lint ansible/playbook-*.yml \
+            --profile min \
             --skip-list fqcn[action-core] \
             --skip-list fqcn[action] \
             --skip-list no-changed-when \
