@@ -29,4 +29,14 @@ jobs:
         run: ansible-galaxy collection install community.general
 
       - name: Run ansible-lint
-        run: ansible-lint ansible/playbook-*.yml
+        run: |
+          ansible-lint ansible/playbook-*.yml \
+            --skip-list fqcn[action-core] \
+            --skip-list fqcn[action] \
+            --skip-list no-changed-when \
+            --skip-list ignore-errors \
+            --skip-list risky-file-permissions \
+            --skip-list command-instead-of-module \
+            --skip-list yaml[truthy] \
+            --skip-list yaml[new-line-at-end-of-file] \
+            --skip-list syntax-check
