@@ -1,0 +1,8 @@
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.env
+__pycache__/
+*.retry
+.DS_Store
