@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VM Lifecycle Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f3;
+      --bg-tertiary: #eeecea;
+      --bg-info: #e6f1fb;
+      --bg-success: #eaf3de;
+      --bg-warning: #faeeda;
+      --bg-danger: #fcebeb;
+      --text-primary: #1a1a1a;
+      --text-secondary: #6b6b6b;
+      --text-info: #185fa5;
+      --text-success: #3b6d11;
+      --text-warning: #854f0b;
+      --text-danger: #a32d2d;
+      --border: rgba(0,0,0,0.12);
+      --border-md: rgba(0,0,0,0.22);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'Menlo', 'Monaco', monospace;
+    }
+    body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
+    .app { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
+
+    /* Header */
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 0.5px solid var(--border); }
+    .header h1 { font-size: 18px; font-weight: 500; }
+    .header p  { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .badge { font-size: 11px; padding: 3px 10px; border-radius: var(--radius-md); font-weight: 500; }
+    .badge-info    { background: var(--bg-info);    color: var(--text-info); }
+    .badge-success { background: var(--bg-success); color: var(--text-success); }
+    .badge-warning { background: var(--bg-warning); color: var(--text-warning); }
+    .badge-danger  { background: var(--bg-danger);  color: var(--text-danger); }
+    .badge-gray    { background: var(--bg-secondary); color: var(--text-secondary); }
+
+    /* KPIs */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+    .kpi { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px 16px; }
+    .kpi-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+    .kpi-value { font-size: 22px; font-weight: 500; }
+    .kpi-value.green { color: var(--text-success); }
+    .kpi-value.red   { color: var(--text-danger); }
+    .kpi-sub { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+
+    /* Layout */
+    .main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 1rem; }
+    .panel { background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
+    .panel-title { font-size: 12px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; }
+
+    /* VM Cards */
+    .vm-card { border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+    .vm-card:hover { background: var(--bg-secondary); }
+    .vm-card.selected { border: 1.5px solid var(--text-info); background: var(--bg-info); }
+    .vm-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+    .vm-name  { font-size: 14px; font-weight: 500; }
+    .vm-alias { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .vm-meta  { font-size: 12px; color: var(--text-secondary); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .dot-running { background: #3b6d11; }
+    .dot-resize  { background: #854f0b; }
+    .dot-snooze  { background: #888780; }
+    .dot-destroy { background: #a32d2d; }
+
+    /* Right panel */
+    .right-panel { display: flex; flex-direction: column; gap: 1rem; }
+    .detail-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1rem; }
+    .detail-title  { font-size: 16px; font-weight: 500; }
+    .detail-need   { font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+
+    /* Specs */
+    .specs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1rem; }
+    .spec-item  { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px 12px; }
+    .spec-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 3px; }
+    .spec-value { font-size: 13px; font-weight: 500; }
+
+    /* Action buttons */
+    .action-buttons { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+    .action-btn { padding: 8px 18px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; border: 0.5px solid var(--border-md); background: var(--bg-primary); color: var(--text-primary); cursor: pointer; transition: all 0.15s; }
+    .action-btn:hover { background: var(--bg-secondary); }
+    .action-btn.active-action { border: 1.5px solid var(--text-info); color: var(--text-info); background: var(--bg-info); }
+
+    /* Invoke */
+    .invoke-btn { padding: 10px 28px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; border: none; background: var(--text-primary); color: var(--bg-primary); cursor: pointer; transition: opacity 0.15s; }
+    .invoke-btn:hover    { opacity: 0.85; }
+    .invoke-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Cost rows */
+    .cost-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+    .cost-row:last-child { border-bottom: none; }
+    .cost-label  { color: var(--text-secondary); }
+    .cost-amount { font-weight: 500; }
+    .cost-amount.savings { color: var(--text-success); }
+    .cost-amount.extra   { color: var(--text-danger); }
+
+    /* Log */
+    .log-box { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 12px 14px; font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); min-height: 80px; max-height: 160px; overflow-y: auto; line-height: 1.7; white-space: pre-wrap; }
+
+    /* Bar chart */
+    .bar-row    { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .bar-label  { font-size: 12px; color: var(--text-secondary); width: 70px; flex-shrink: 0; }
+    .bar-track  { flex: 1; background: var(--bg-secondary); border-radius: 4px; height: 10px; overflow: hidden; }
+    .bar-fill   { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+    .bar-amount { font-size: 12px; font-weight: 500; width: 90px; text-align: right; flex-shrink: 0; }
+
+    /* Credit bar */
+    .credit-track { width: 100%; background: var(--bg-secondary); border-radius: 4px; height: 8px; margin: 8px 0 6px; overflow: hidden; }
+    .credit-fill  { height: 100%; border-radius: 4px; background: #3b6d11; }
+
+    /* Misc */
+    .sep { border: none; border-top: 0.5px solid var(--border); margin: 1rem 0; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; color: var(--text-secondary); font-size: 14px; gap: 8px; }
+    .invoke-row { display: flex; justify-content: flex-end; margin-top: 0.5rem; }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--bg-secondary); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 750px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .kpi-grid  { grid-template-columns: repeat(2, 1fr); }
+      .specs-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div>
+      <h1>VM Lifecycle Dashboard</h1>
+      <p>Azure &middot; centralus &middot; Standard_B1s &middot; Acme Corp</p>
+    </div>
+    <span class="badge badge-info">Free Tier &middot; &#8377;16,000 credit</span>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Monthly (all running)</div>
+      <div class="kpi-value red">&#8377;19,200</div>
+      <div class="kpi-sub">4 VMs &times; Standard_B1s</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Monthly (optimized)</div>
+      <div class="kpi-value green">&#8377;9,600</div>
+      <div class="kpi-sub">snooze + destroy applied</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Monthly savings</div>
+      <div class="kpi-value green">&#8377;9,600</div>
+      <div class="kpi-sub">50% cost reduction</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Credit runway</div>
+      <div class="kpi-value red">25 days</div>
+      <div class="kpi-sub">unoptimized &rarr; 50 days optimized</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-grid">
+
+    <!-- Left: inventory -->
+    <div class="panel">
+      <div class="panel-title">VM Inventory</div>
+      <div id="vmList">Loading...</div>
+    </div>
+
+    <!-- Right -->
+    <div class="right-panel">
+
+      <!-- Detail + invoke -->
+      <div class="panel">
+        <div class="empty-state" id="emptyState">
+          <span style="font-size:28px; opacity:0.3;">&#9654;</span>
+          <span>Select a VM from the inventory</span>
+        </div>
+
+        <div id="vmDetail" style="display:none;">
+          <div class="detail-header">
+            <div>
+              <div class="detail-title" id="detailTitle"></div>
+              <div class="detail-need"  id="detailNeed"></div>
+            </div>
+            <span class="badge" id="detailBadge"></span>
+          </div>
+
+          <div class="specs-grid" id="specsGrid"></div>
+
+          <div class="panel-title">Select action</div>
+          <div class="action-buttons" id="actionButtons">
+            <button class="action-btn" data-action="running">&#9654; Run</button>
+            <button class="action-btn" data-action="resize">&#8645; Resize</button>
+            <button class="action-btn" data-action="snooze">&#9646;&#9646; Snooze</button>
+            <button class="action-btn" data-action="destroy">&#10005; Destroy</button>
+          </div>
+
+          <hr class="sep">
+          <div class="panel-title">Cost impact</div>
+          <div id="costRows"></div>
+
+          <hr class="sep">
+          <div class="invoke-row">
+            <button class="invoke-btn" id="invokeBtn" disabled>Invoke VM</button>
+          </div>
+
+          <div id="logSection" style="display:none; margin-top:1rem;">
+            <div class="panel-title" id="logTitle">Job log</div>
+            <div class="log-box" id="logBox"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost comparison -->
+      <div class="panel">
+        <div class="panel-title">Cost comparison — all states</div>
+        <div id="costBars"></div>
+
+        <hr class="sep">
+        <div class="panel-title">Azure credit tracker</div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-secondary);">
+          <span>&#8377;16,000 remaining</span>
+          <span>of &#8377;19,200 unoptimized monthly cap</span>
+        </div>
+        <div class="credit-track">
+          <div class="credit-fill" style="width:83%;"></div>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary);">
+          Optimized spend (&#8377;9,600/mo) extends credit runway from 25 days to 50 days
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const stateColors = { running:"badge-success", resize:"badge-warning", snooze:"badge-gray", destroy:"badge-danger" };
+  const dotClass    = { running:"dot-running",   resize:"dot-resize",   snooze:"dot-snooze",  destroy:"dot-destroy" };
+  const costDefs    = {
+    running: { rows: [ ["Hourly rate","&#8377;6.57",""], ["Monthly cost","&#8377;4,800",""], ["Billing status","Full compute billing",""] ] },
+    resize:  { rows: [ ["Before resize","&#8377;4,800/mo",""], ["After resize","&#8377;19,200/mo","extra"], ["Cost delta","+&#8377;14,400/mo","extra"], ["Upgraded to","Standard_B2s",""] ] },
+    snooze:  { rows: [ ["Always-on cost","&#8377;4,800/mo",""], ["Snoozed cost","&#8377;1,800/mo","savings"], ["Monthly savings","&#8377;3,000/mo","savings"], ["How","9 hrs/day · 5 days/wk",""] ] },
+    destroy: { rows: [ ["Current cost","&#8377;4,800/mo",""], ["After destroy","&#8377;0/mo","savings"], ["Monthly savings","&#8377;4,800/mo","savings"], ["Annual savings","&#8377;57,600","savings"] ] }
+  };
+  const bars = [
+    { label:"Running", monthly:4800,  color:"#639922", pct:25  },
+    { label:"Resize",  monthly:19200, color:"#BA7517", pct:100 },
+    { label:"Snooze",  monthly:1800,  color:"#888780", pct:9   },
+    { label:"Destroy", monthly:0,     color:"#A32D2D", pct:0   }
+  ];
+
+  let vms = [], selectedVM = null, selectedAction = null, polling = null;
+
+  async function loadInventory() {
+    try {
+      const r = await fetch("/api/vms");
+      const d = await r.json();
+      vms = d.vms;
+      renderVMList();
+      renderBars();
+    } catch(e) {
+      document.getElementById("vmList").innerHTML = "<p style='color:var(--text-danger);font-size:13px;'>Could not load inventory. Is Flask running?</p>";
+    }
+  }
+
+  function renderVMList() {
+    document.getElementById("vmList").innerHTML = vms.map(vm => `
+      <div class="vm-card" id="card-${vm.id}" onclick="selectVM('${vm.id}')">
+        <div class="vm-card-top">
+          <span class="vm-name"><span class="status-dot ${dotClass[vm.desired_state]}"></span>${vm.alias}</span>
+          <span class="badge ${stateColors[vm.desired_state]}">${vm.desired_state}</span>
+        </div>
+        <div class="vm-alias">${vm.name} &middot; ${vm.environment}</div>
+        <div class="vm-meta">${vm.business_unit} &middot; ${vm.priority} priority</div>
+      </div>
+    `).join("");
+  }
+
+  function selectVM(id) {
+    selectedVM     = vms.find(v => v.id === id);
+    selectedAction = selectedVM.desired_state;
+    document.querySelectorAll(".vm-card").forEach(c => c.classList.remove("selected"));
+    document.getElementById("card-" + id).classList.add("selected");
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const vm = selectedVM;
+    document.getElementById("emptyState").style.display  = "none";
+    document.getElementById("vmDetail").style.display    = "block";
+    document.getElementById("detailTitle").textContent   = vm.alias;
+    document.getElementById("detailNeed").textContent    = vm.business_need;
+    const badge = document.getElementById("detailBadge");
+    badge.textContent = vm.environment;
+    badge.className   = "badge badge-" + (vm.environment === "production" ? "danger" : vm.environment === "staging" ? "warning" : "gray");
+
+    const s = vm.specs;
+    document.getElementById("specsGrid").innerHTML = `
+      <div class="spec-item"><div class="spec-label">CPU</div><div class="spec-value">${s.cpu || s.cpu_after || "1"} vCPU</div></div>
+      <div class="spec-item"><div class="spec-label">Memory</div><div class="spec-value">${s.memory_gb || s.memory_gb_after || "1"} GB</div></div>
+      <div class="spec-item"><div class="spec-label">Disk</div><div class="spec-value">${s.disk_gb || s.disk_gb_after || "30"} GB</div></div>
+      <div class="spec-item"><div class="spec-label">Size</div><div class="spec-value">${s.vm_size || s.vm_size_after || "B1s"}</div></div>
+    `;
+
+    document.querySelectorAll(".action-btn").forEach(b =>
+      b.classList.toggle("active-action", b.dataset.action === selectedAction)
+    );
+
+    renderCost();
+    document.getElementById("invokeBtn").disabled = false;
+    document.getElementById("logSection").style.display = "none";
+  }
+
+  function renderCost() {
+    const rows = costDefs[selectedAction].rows;
+    document.getElementById("costRows").innerHTML = rows.map(([label, val, cls]) =>
+      `<div class="cost-row"><span class="cost-label">${label}</span><span class="cost-amount ${cls}">${val}</span></div>`
+    ).join("");
+  }
+
+  function renderBars() {
+    document.getElementById("costBars").innerHTML = bars.map(b => `
+      <div class="bar-row">
+        <span class="bar-label">${b.label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${b.pct}%;background:${b.color};"></div></div>
+        <span class="bar-amount">&#8377;${b.monthly.toLocaleString()}/mo</span>
+      </div>
+    `).join("");
+  }
+
+  document.getElementById("actionButtons").addEventListener("click", e => {
+    const btn = e.target.closest(".action-btn");
+    if (!btn || !selectedVM) return;
+    selectedAction = btn.dataset.action;
+    document.querySelectorAll(".action-btn").forEach(b => b.classList.toggle("active-action", b === btn));
+    renderCost();
+  });
+
+  document.getElementById("invokeBtn").addEventListener("click", async () => {
+    if (!selectedVM) return;
+    const btn        = document.getElementById("invokeBtn");
+    const logSection = document.getElementById("logSection");
+    const logBox     = document.getElementById("logBox");
+
+    btn.disabled   = true;
+    btn.innerHTML  = '<span class="spinner"></span>Invoking...';
+    logSection.style.display = "block";
+    logBox.textContent = "";
+
+    try {
+      const res  = await fetch("/api/invoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vm_id: selectedVM.id, action: selectedAction })
+      });
+      const data = await res.json();
+      logBox.textContent = "> " + data.message + "\n";
+
+      polling = setInterval(async () => {
+        const s = await fetch("/api/status/" + selectedVM.id);
+        const j = await s.json();
+        logBox.textContent = j.logs.join("\n");
+        logBox.scrollTop   = logBox.scrollHeight;
+
+        if (j.status === "done" || j.status === "failed") {
+          clearInterval(polling);
+          btn.disabled  = false;
+          btn.innerHTML = "Invoke VM";
+          selectedVM.desired_state = selectedAction;
+          renderVMList();
+          document.getElementById("card-" + selectedVM.id).classList.add("selected");
+        }
+      }, 1500);
+
+    } catch(e) {
+      logBox.textContent = "> Error: Could not reach Flask API.\n> Make sure app.py is running on port 5000.";
+      btn.disabled  = false;
+      btn.innerHTML = "Invoke VM";
+    }
+  });
+
+  loadInventory();
+  renderBars();
+</script>
+</body>
+</html>

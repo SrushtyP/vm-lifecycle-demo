@@ -9,7 +9,7 @@ app = Flask(__name__)
 CORS(app)
 
 BASE_DIR       = os.path.dirname(os.path.abspath(__file__))
-INVENTORY_PATH = os.path.join(BASE_DIR, '..', 'inventory', 'vm_inventory.json')
+INVENTORY_PATH = os.path.join(BASE_DIR, '..', 'inventory', 'inventory.json')
 TERRAFORM_DIR  = os.path.join(BASE_DIR, '..', 'terraform')
 ANSIBLE_DIR    = os.path.join(BASE_DIR, '..', 'ansible')
 
