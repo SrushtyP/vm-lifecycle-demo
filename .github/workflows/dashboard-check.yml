@@ -30,3 +30,4 @@ jobs:
 
       - name: Verify inventory JSON is valid
         run: python -c "import json; json.load(open('inventory/vm_inventory.json'))"
+        working-directory: ${{ github.workspace }}

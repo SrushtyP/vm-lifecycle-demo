@@ -1,0 +1,13 @@
+profile: basic
+exclude_paths:
+  - .cache/
+warn_list:
+  - fqcn[action-core]
+  - no-changed-when
+  - ignore-errors
+  - risky-file-permissions
+  - command-instead-of-module
+  - yaml[truthy]
+  - yaml[new-line-at-end-of-file]
+skip_list:
+  - syntax-check
