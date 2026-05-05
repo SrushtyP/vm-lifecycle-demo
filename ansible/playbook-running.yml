@@ -88,3 +88,4 @@
           - "💰 Hourly Cost: ₹{{ hourly_cost_inr }}"
           - "📅 Monthly Cost: ₹{{ monthly_cost_inr }}"
           - "🌐 Nginx is live and serving traffic"
+# Playbook: VM Running — Production Web Server

@@ -1,3 +1,4 @@
+# VM Lifecycle Demo — Azure centralus — Standard_B1s
 terraform {
   required_providers {
     azurerm = {
