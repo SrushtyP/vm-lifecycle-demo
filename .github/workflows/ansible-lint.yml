@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - 'ansible/**'
+      - '.github/workflows/ansible-lint.yml'
   pull_request:
     paths:
       - 'ansible/**'
+      - '.github/workflows/ansible-lint.yml'
 
 jobs:
   lint:
@@ -39,5 +41,4 @@ jobs:
             --skip-list risky-file-permissions \
             --skip-list command-instead-of-module \
             --skip-list yaml[truthy] \
-            --skip-list yaml[new-line-at-end-of-file] \
-            --skip-list syntax-check
+            --skip-list yaml[new-line-at-end-of-file]
