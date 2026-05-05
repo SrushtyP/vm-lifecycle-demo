@@ -1,0 +1,15 @@
+# Global vars shared across all playbooks
+azure_region: centralus
+vm_size_default: Standard_B1s
+vm_size_resized: Standard_B2s
+admin_user: azureuser
+resource_group: vm-lifecycle-demo-rg
+
+# Cost values in INR
+cost_b1s_hourly_inr: 6.57
+cost_b1s_monthly_inr: 4800
+cost_b2s_hourly_inr: 26.28
+cost_b2s_monthly_inr: 19200
+cost_snooze_monthly_inr: 1800
+cost_snooze_savings_inr: 3000
+cost_destroy_savings_inr: 4800

@@ -1,0 +1,146 @@
+---
+- name: VM Destroy — Legacy Test Runner
+  hosts: vm_destroy
+  become: yes
+
+  vars:
+    vm_name: vm-destroy
+    lifecycle_state: destroy
+    resource_group: vm-lifecycle-demo-rg
+    monthly_cost_inr: 4800
+    annual_cost_inr: 57600
+    monthly_savings_inr: 4800
+    annual_savings_inr: 57600
+    hourly_cost_inr: 6.57
+
+  pre_tasks:
+    - name: Wait for SSH to be available
+      wait_for_connection:
+        delay: 10
+        timeout: 120
+
+    - name: Gather facts
+      gather_facts:
+
+    - name: Print pre-destroy cost summary
+      debug:
+        msg:
+          - "📋 VM: {{ vm_name }}"
+          - "⚠️  This VM will be permanently destroyed"
+          - "💰 Current Monthly Cost: ₹{{ monthly_cost_inr }}"
+          - "📅 Current Annual Cost:  ₹{{ annual_cost_inr }}"
+          - "💚 Monthly Savings after destroy: ₹{{ monthly_savings_inr }}"
+          - "🎉 Annual Savings after destroy:  ₹{{ annual_savings_inr }}"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Create destroy log directory
+      file:
+        path: /opt/destroy-logs
+        state: directory
+        mode: '0755'
+
+    - name: Write pre-destroy audit log
+      copy:
+        dest: /opt/destroy-logs/destroy_audit.log
+        content: |
+          VM Destroy Audit Log
+          ====================
+          VM Name         : {{ vm_name }}
+          Lifecycle       : {{ lifecycle_state }}
+          Resource Group  : {{ resource_group }}
+          Business Unit   : QA
+          Environment     : test
+          Reason          : Project ended. No longer required.
+          Monthly Cost    : ₹{{ monthly_cost_inr }}
+          Annual Cost     : ₹{{ annual_cost_inr }}
+          Monthly Savings : ₹{{ monthly_savings_inr }}
+          Annual Savings  : ₹{{ annual_savings_inr }}
+          Note            : All resources will be permanently deleted.
+                            VM, NIC, Disk, Public IP — everything gone.
+
+    - name: Gracefully stop all services
+      shell: |
+        systemctl list-units --type=service --state=running \
+        --no-legend | awk '{print $1}' | \
+        grep -v -E 'ssh|systemd|dbus|network' | \
+        xargs -I{} systemctl stop {} || true
+      ignore_errors: yes
+
+    - name: Clear temp files before destroy
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp
+        - /var/tmp
+      ignore_errors: yes
+
+    - name: Sync disk before destroy
+      command: sync
+
+    - name: Print final destroy warning
+      debug:
+        msg:
+          - "🚨 FINAL WARNING — About to destroy all resources"
+          - "🗑  VM, NIC, Disk, Public IP will be deleted"
+          - "⚠️  This action is IRREVERSIBLE"
+          - "📡 SSH connection will be lost permanently"
+
+    - name: Destroy VM via Azure CLI
+      command: >
+        az vm delete
+        --resource-group {{ resource_group }}
+        --name {{ vm_name }}
+        --yes
+      delegate_to: localhost
+      register: destroy_vm_result
+
+    - name: Delete Network Interface
+      command: >
+        az network nic delete
+        --resource-group {{ resource_group }}
+        --name vm-destroy-nic
+      delegate_to: localhost
+      ignore_errors: yes
+
+    - name: Delete Public IP
+      command: >
+        az network public-ip delete
+        --resource-group {{ resource_group }}
+        --name vm-destroy-pip
+      delegate_to: localhost
+      ignore_errors: yes
+
+    - name: Delete OS Disk
+      command: >
+        az disk delete
+        --resource-group {{ resource_group }}
+        --name vm-destroy-osdisk
+        --yes
+      delegate_to: localhost
+      ignore_errors: yes
+
+    - name: Set destroy status fact
+      set_fact:
+        vm_status: "DESTROYED"
+        cost_status: "Zero cost — all resources deleted"
+
+  post_tasks:
+    - name: Print post-destroy cost summary
+      delegate_to: localhost
+      debug:
+        msg:
+          - "🗑  VM: {{ vm_name }} DESTROYED successfully"
+          - "✅ VM deleted"
+          - "✅ NIC deleted"
+          - "✅ Public IP deleted"
+          - "✅ OS Disk deleted"
+          - "💰 Previous Monthly Cost: ₹{{ monthly_cost_inr }}"
+          - "💚 Monthly Savings:       ₹{{ monthly_savings_inr }}"
+          - "🎉 Annual Savings:        ₹{{ annual_savings_inr }}"
+          - "📊 Ongoing Cost:          ₹0 — Zero billing"

@@ -1,0 +1,117 @@
+---
+- name: VM Snooze — Dev Sandbox
+  hosts: vm_snooze
+  become: yes
+
+  vars:
+    vm_name: vm-snooze
+    lifecycle_state: snooze
+    resource_group: vm-lifecycle-demo-rg
+    monthly_cost_if_always_on_inr: 4800
+    monthly_cost_snoozed_inr: 1800
+    monthly_savings_inr: 3000
+    hourly_cost_inr: 6.57
+    active_hours_per_day: 9
+    active_days_per_week: 5
+
+  pre_tasks:
+    - name: Wait for SSH to be available
+      wait_for_connection:
+        delay: 10
+        timeout: 120
+
+    - name: Gather facts
+      gather_facts:
+
+    - name: Print pre-snooze cost summary
+      debug:
+        msg:
+          - "📋 VM: {{ vm_name }}"
+          - "💰 Cost if always ON: ₹{{ monthly_cost_if_always_on_inr }}/month"
+          - "😴 Cost when Snoozed: ₹{{ monthly_cost_snoozed_inr }}/month"
+          - "💚 Monthly Savings: ₹{{ monthly_savings_inr }}/month"
+          - "🕐 Active Hours: {{ active_hours_per_day }}hrs/day | {{ active_days_per_week }}days/week"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - curl
+          - htop
+          - net-tools
+        state: present
+
+    - name: Create snooze log directory
+      file:
+        path: /opt/snooze-logs
+        state: directory
+        mode: '0755'
+
+    - name: Write snooze event log
+      copy:
+        dest: /opt/snooze-logs/snooze_event.log
+        content: |
+          VM Snooze Event Log
+          ===================
+          VM Name       : {{ vm_name }}
+          Lifecycle     : {{ lifecycle_state }}
+          Resource Group: {{ resource_group }}
+          Active Hours  : {{ active_hours_per_day }} hrs/day
+          Active Days   : {{ active_days_per_week }} days/week
+          Always-On Cost: ₹{{ monthly_cost_if_always_on_inr }}/month
+          Snoozed Cost  : ₹{{ monthly_cost_snoozed_inr }}/month
+          Monthly Saving: ₹{{ monthly_savings_inr }}/month
+          Note          : Disk retained. Compute billing stops on deallocate.
+
+    - name: Gracefully stop all running services
+      shell: |
+        systemctl list-units --type=service --state=running \
+        --no-legend | awk '{print $1}' | \
+        grep -v -E 'ssh|systemd|dbus|network' | \
+        xargs -I{} systemctl stop {} || true
+      ignore_errors: yes
+
+    - name: Sync disk before snooze
+      command: sync
+
+    - name: Print snooze warning
+      debug:
+        msg:
+          - "⚠️  VM is about to be deallocated"
+          - "💾 Disk will be retained"
+          - "🔌 Compute billing will stop"
+          - "📡 SSH will be lost after this step"
+
+    - name: Deallocate VM via Azure CLI
+      command: >
+        az vm deallocate
+        --resource-group {{ resource_group }}
+        --name {{ vm_name }}
+      delegate_to: localhost
+      register: snooze_result
+
+    - name: Print deallocate result
+      debug:
+        msg: "Snooze result: {{ snooze_result.stdout }}"
+
+    - name: Set snooze status fact
+      set_fact:
+        vm_status: "SNOOZED"
+        cost_status: "Reduced billing — ₹{{ monthly_cost_snoozed_inr }}/month"
+
+  post_tasks:
+    - name: Print post-snooze cost summary
+      delegate_to: localhost
+      debug:
+        msg:
+          - "😴 VM: {{ vm_name }} is now SNOOZED"
+          - "💾 Disk retained — minimal storage cost applies"
+          - "🔌 Compute billing STOPPED"
+          - "💰 Always-On Cost: ₹{{ monthly_cost_if_always_on_inr }}/month"
+          - "💚 Snoozed Cost:   ₹{{ monthly_cost_snoozed_inr }}/month"
+          - "🎉 You are saving: ₹{{ monthly_savings_inr }}/month"

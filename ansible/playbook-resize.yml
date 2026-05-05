@@ -1,0 +1,132 @@
+---
+- name: VM Resize — Analytics Engine
+  hosts: vm_resize
+  become: yes
+
+  vars:
+    vm_name: vm-resize
+    lifecycle_state: resize
+    resource_group: vm-lifecycle-demo-rg
+    monthly_cost_before_inr: 4800
+    monthly_cost_after_inr: 19200
+    hourly_cost_before_inr: 6.57
+    hourly_cost_after_inr: 26.28
+    cost_delta_monthly_inr: 14400
+    vm_size_before: Standard_B1s
+    vm_size_after: Standard_B2s
+    disk_size_before_gb: 30
+    disk_size_after_gb: 64
+
+  pre_tasks:
+    - name: Wait for SSH to be available
+      wait_for_connection:
+        delay: 10
+        timeout: 120
+
+    - name: Gather facts
+      gather_facts:
+
+    - name: Print pre-resize cost summary
+      debug:
+        msg:
+          - "📋 VM: {{ vm_name }}"
+          - "📦 Current Size: {{ vm_size_before }}"
+          - "💰 Current Hourly Cost: ₹{{ hourly_cost_before_inr }}"
+          - "📅 Current Monthly Cost: ₹{{ monthly_cost_before_inr }}"
+          - "⚡ Resizing to: {{ vm_size_after }}"
+          - "💸 New Monthly Cost will be: ₹{{ monthly_cost_after_inr }}"
+          - "📈 Cost Delta: +₹{{ cost_delta_monthly_inr }}/month"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install analytics dependencies
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - htop
+          - sysstat
+          - net-tools
+        state: present
+
+    - name: Install Python analytics libraries
+      pip:
+        name:
+          - pandas
+          - numpy
+        state: present
+
+    - name: Check current memory before resize
+      debug:
+        msg: "Current RAM: {{ ansible_memtotal_mb }} MB"
+
+    - name: Check current disk before resize
+      debug:
+        msg: "Current Disk: {{ ansible_devices.sda.size }}"
+
+    - name: Resize VM via Azure CLI
+      command: >
+        az vm resize
+        --resource-group {{ resource_group }}
+        --name {{ vm_name }}
+        --size {{ vm_size_after }}
+      delegate_to: localhost
+      register: resize_result
+
+    - name: Print resize result
+      debug:
+        msg: "Resize output: {{ resize_result.stdout }}"
+
+    - name: Wait for VM to come back after resize
+      wait_for_connection:
+        delay: 30
+        timeout: 180
+
+    - name: Gather facts again after resize
+      gather_facts:
+
+    - name: Verify new memory after resize
+      debug:
+        msg: "New RAM after resize: {{ ansible_memtotal_mb }} MB"
+
+    - name: Expand disk partition after resize
+      command: resize2fs /dev/sda1
+      ignore_errors: yes
+
+    - name: Create analytics working directory
+      file:
+        path: /opt/analytics
+        state: directory
+        mode: '0755'
+
+    - name: Deploy analytics placeholder script
+      copy:
+        dest: /opt/analytics/run_analytics.py
+        content: |
+          # Analytics Engine — running on resized VM
+          # Size: Standard_B2s | RAM: 4GB | Disk: 64GB
+          import datetime
+          print(f"Analytics job started at {datetime.datetime.now()}")
+          print("Processing end-of-month data...")
+          print("Done.")
+        mode: '0755'
+
+    - name: Set resize status fact
+      set_fact:
+        vm_status: "RESIZED"
+        cost_status: "Upgraded billing — ₹{{ monthly_cost_after_inr }}/month"
+
+  post_tasks:
+    - name: Print post-resize cost summary
+      debug:
+        msg:
+          - "✅ VM: {{ vm_name }} successfully resized"
+          - "📦 Old Size: {{ vm_size_before }} → New Size: {{ vm_size_after }}"
+          - "💾 Old Disk: {{ disk_size_before_gb }}GB → New Disk: {{ disk_size_after_gb }}GB"
+          - "💰 Old Hourly: ₹{{ hourly_cost_before_inr }} → New Hourly: ₹{{ hourly_cost_after_inr }}"
+          - "📅 Old Monthly: ₹{{ monthly_cost_before_inr }} → New Monthly: ₹{{ monthly_cost_after_inr }}"
+          - "📈 Additional Cost: ₹{{ cost_delta_monthly_inr }}/month"

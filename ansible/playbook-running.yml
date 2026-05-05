@@ -1,0 +1,90 @@
+---
+- name: VM Running — Production Web Server
+  hosts: vm_running
+  become: yes
+
+  vars:
+    vm_name: vm-running
+    lifecycle_state: running
+    monthly_cost_inr: 4800
+    hourly_cost_inr: 6.57
+
+  pre_tasks:
+    - name: Wait for SSH to be available
+      wait_for_connection:
+        delay: 10
+        timeout: 120
+
+    - name: Gather facts
+      gather_facts:
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - curl
+          - wget
+          - htop
+          - net-tools
+          - ufw
+        state: present
+
+    - name: Enable and start UFW firewall
+      ufw:
+        state: enabled
+        policy: deny
+
+    - name: Allow SSH through firewall
+      ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    - name: Allow HTTP through firewall
+      ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+
+    - name: Install Nginx as web server
+      apt:
+        name: nginx
+        state: present
+
+    - name: Start and enable Nginx
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Deploy status page
+      copy:
+        dest: /var/www/html/index.html
+        content: |
+          <html>
+            <body>
+              <h1>VM Running ✅</h1>
+              <p>State: Production | Size: Standard_B1s</p>
+              <p>Cost: ₹6.57/hr | ₹4800/month</p>
+            </body>
+          </html>
+
+    - name: Set VM lifecycle tag fact
+      set_fact:
+        vm_status: "RUNNING"
+        cost_status: "Full billing active — ₹{{ monthly_cost_inr }}/month"
+
+  post_tasks:
+    - name: Print cost summary
+      debug:
+        msg:
+          - "✅ VM: {{ vm_name }}"
+          - "📊 State: {{ lifecycle_state | upper }}"
+          - "💰 Hourly Cost: ₹{{ hourly_cost_inr }}"
+          - "📅 Monthly Cost: ₹{{ monthly_cost_inr }}"
+          - "🌐 Nginx is live and serving traffic"
