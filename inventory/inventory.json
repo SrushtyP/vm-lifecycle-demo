@@ -1,0 +1,128 @@
+{
+  "inventory_version": "1.0.0",
+  "last_updated": "2026-05-05",
+  "organization": "Acme Corp",
+  "azure_region": "centralus",
+  "vm_size": "Standard_B1s",
+  "currency": "INR",
+  "vms": [
+    {
+      "id": "vm-001",
+      "name": "vm-running",
+      "alias": "Production Web Server",
+      "lifecycle_state": "running",
+      "business_need": "Hosts the customer-facing portal. Required 24/7 for revenue operations.",
+      "business_unit": "Sales & Marketing",
+      "priority": "critical",
+      "environment": "production",
+      "specs": {
+        "cpu": 1,
+        "memory_gb": 1,
+        "disk_gb": 30,
+        "os": "Ubuntu 22.04",
+        "vm_size": "Standard_B1s",
+        "region": "centralus"
+      },
+      "cost": {
+        "hourly_inr": 6.57,
+        "daily_inr": 157.68,
+        "monthly_inr": 4800,
+        "annual_inr": 57600
+      },
+      "demo_action": "running",
+      "demo_notes": "VM is live and serving traffic."
+    },
+    {
+      "id": "vm-002",
+      "name": "vm-resize",
+      "alias": "Analytics Engine",
+      "lifecycle_state": "resize",
+      "business_need": "Processes end-of-month analytics. Needs temporary scale-up.",
+      "business_unit": "Data & Insights",
+      "priority": "high",
+      "environment": "staging",
+      "specs": {
+        "cpu_before": 1,
+        "memory_gb_before": 1,
+        "disk_gb_before": 30,
+        "cpu_after": 2,
+        "memory_gb_after": 4,
+        "disk_gb_after": 64,
+        "vm_size_before": "Standard_B1s",
+        "vm_size_after": "Standard_B2s",
+        "region": "centralus"
+      },
+      "cost": {
+        "hourly_inr_before": 6.57,
+        "hourly_inr_after": 26.28,
+        "monthly_inr_before": 4800,
+        "monthly_inr_after": 19200,
+        "cost_delta_monthly_inr": 14400
+      },
+      "demo_action": "resize",
+      "demo_notes": "VM scaled up from B1s to B2s for analytics workload."
+    },
+    {
+      "id": "vm-003",
+      "name": "vm-snooze",
+      "alias": "Dev Sandbox",
+      "lifecycle_state": "snooze",
+      "business_need": "Used only during business hours. Snoozed nights and weekends.",
+      "business_unit": "Engineering",
+      "priority": "medium",
+      "environment": "development",
+      "specs": {
+        "cpu": 1,
+        "memory_gb": 1,
+        "disk_gb": 30,
+        "os": "Ubuntu 22.04",
+        "vm_size": "Standard_B1s",
+        "region": "centralus"
+      },
+      "cost": {
+        "hourly_inr": 6.57,
+        "active_hours_per_day": 9,
+        "active_days_per_week": 5,
+        "monthly_inr_if_always_on": 4800,
+        "monthly_inr_snoozed": 1800,
+        "monthly_savings_inr": 3000
+      },
+      "demo_action": "snooze",
+      "demo_notes": "VM deallocated outside business hours. Disk retained, compute billing stops."
+    },
+    {
+      "id": "vm-004",
+      "name": "vm-destroy",
+      "alias": "Legacy Test Runner",
+      "lifecycle_state": "destroy",
+      "business_need": "Old CI test environment. Project ended. All resources to be deleted.",
+      "business_unit": "QA",
+      "priority": "low",
+      "environment": "test",
+      "specs": {
+        "cpu": 1,
+        "memory_gb": 1,
+        "disk_gb": 30,
+        "os": "Ubuntu 22.04",
+        "vm_size": "Standard_B1s",
+        "region": "centralus"
+      },
+      "cost": {
+        "hourly_inr": 6.57,
+        "monthly_inr": 4800,
+        "monthly_savings_after_destroy_inr": 4800,
+        "annual_savings_after_destroy_inr": 57600
+      },
+      "demo_action": "destroy",
+      "demo_notes": "All resources deleted. Zero ongoing cost."
+    }
+  ],
+  "total_cost_summary": {
+    "monthly_inr_all_running": 19200,
+    "monthly_inr_optimized": 9600,
+    "monthly_savings_inr": 9600,
+    "azure_credit_remaining_inr": 16000,
+    "credit_exhausted_days_unoptimized": 25,
+    "credit_exhausted_days_optimized": 50
+  }
+}
