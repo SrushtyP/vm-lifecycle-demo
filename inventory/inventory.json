@@ -11,6 +11,7 @@
       "name": "vm-running",
       "alias": "Production Web Server",
       "lifecycle_state": "running",
+      "desired_state": "running",
       "business_need": "Hosts the customer-facing portal. Required 24/7 for revenue operations.",
       "business_unit": "Sales & Marketing",
       "priority": "critical",
@@ -37,6 +38,7 @@
       "name": "vm-resize",
       "alias": "Analytics Engine",
       "lifecycle_state": "resize",
+      "desired_state": "resize",
       "business_need": "Processes end-of-month analytics. Needs temporary scale-up.",
       "business_unit": "Data & Insights",
       "priority": "high",
@@ -48,6 +50,7 @@
         "cpu_after": 2,
         "memory_gb_after": 4,
         "disk_gb_after": 64,
+        "os": "Ubuntu 22.04",
         "vm_size_before": "Standard_B1s",
         "vm_size_after": "Standard_B2s",
         "region": "centralus"
@@ -55,6 +58,8 @@
       "cost": {
         "hourly_inr_before": 6.57,
         "hourly_inr_after": 26.28,
+        "daily_inr_before": 157.68,
+        "daily_inr_after": 630.72,
         "monthly_inr_before": 4800,
         "monthly_inr_after": 19200,
         "cost_delta_monthly_inr": 14400
@@ -67,6 +72,7 @@
       "name": "vm-snooze",
       "alias": "Dev Sandbox",
       "lifecycle_state": "snooze",
+      "desired_state": "snooze",
       "business_need": "Used only during business hours. Snoozed nights and weekends.",
       "business_unit": "Engineering",
       "priority": "medium",
@@ -83,6 +89,8 @@
         "hourly_inr": 6.57,
         "active_hours_per_day": 9,
         "active_days_per_week": 5,
+        "daily_inr_if_always_on": 157.68,
+        "daily_inr_snoozed": 59.13,
         "monthly_inr_if_always_on": 4800,
         "monthly_inr_snoozed": 1800,
         "monthly_savings_inr": 3000
@@ -95,6 +103,7 @@
       "name": "vm-destroy",
       "alias": "Legacy Test Runner",
       "lifecycle_state": "destroy",
+      "desired_state": "destroy",
       "business_need": "Old CI test environment. Project ended. All resources to be deleted.",
       "business_unit": "QA",
       "priority": "low",
@@ -109,6 +118,7 @@
       },
       "cost": {
         "hourly_inr": 6.57,
+        "daily_inr": 157.68,
         "monthly_inr": 4800,
         "monthly_savings_after_destroy_inr": 4800,
         "annual_savings_after_destroy_inr": 57600
